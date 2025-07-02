@@ -44,6 +44,312 @@ local function createRippleEffect(parent, position)
     end)
 end
 
+-- Key sistemi için değişkenler
+local validKeys = {}
+local keyCheckUrl = ""
+local isKeyValid = false
+
+-- Key sistemi fonksiyonları
+function UltraGUI:SetKey(key)
+    if type(key) == "string" then
+        validKeys = {key}
+    elseif type(key) == "table" then
+        validKeys = key
+    end
+end
+
+function UltraGUI:SetKeyUrl(url)
+    keyCheckUrl = url
+end
+
+function UltraGUI:CheckKey(inputKey)
+    -- Yerel key kontrolü
+    for _, validKey in ipairs(validKeys) do
+        if inputKey == validKey then
+            return true
+        end
+    end
+    
+    -- URL ile key kontrolü (opsiyonel)
+    if keyCheckUrl ~= "" then
+        local success, result = pcall(function()
+            return game:HttpGet(keyCheckUrl .. "?key=" .. inputKey)
+        end)
+        
+        if success and result == "valid" then
+            return true
+        end
+    end
+    
+    return false
+end
+
+function UltraGUI:CreateKeySystem(options)
+    options = options or {}
+    local keyTitle = options.Title or "UltraGUI Key Sistemi"
+    local keyDescription = options.Description or "Lütfen geçerli bir key girin"
+    local keyPlaceholder = options.KeyPlaceholder or "Key'inizi buraya girin..."
+    local keys = options.AcceptedKeys or {"ULTRA-GUI-2024"}
+    local keyUrl = options.KeyUrl or ""
+    local successCallback = options.Success or function() end
+    local failCallback = options.Fail or function() end
+    
+    -- Key listesini ayarla
+    self:SetKey(keys)
+    if keyUrl ~= "" then
+        self:SetKeyUrl(keyUrl)
+    end
+    
+    -- Ana ScreenGui oluştur
+    local keyScreenGui = Instance.new("ScreenGui")
+    keyScreenGui.Name = "UltraGUI_KeySystem"
+    keyScreenGui.ResetOnSpawn = false
+    keyScreenGui.IgnoreGuiInset = true
+    keyScreenGui.Parent = playerGui
+    
+    -- Blur efekti için background
+    local blurBg = Instance.new("Frame")
+    blurBg.Name = "BlurBackground"
+    blurBg.Size = UDim2.new(1, 0, 1, 0)
+    blurBg.Position = UDim2.new(0, 0, 0, 0)
+    blurBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    blurBg.BackgroundTransparency = 0.3
+    blurBg.BorderSizePixel = 0
+    blurBg.Parent = keyScreenGui
+    
+    -- Ana key frame
+    local keyFrame = Instance.new("Frame")
+    keyFrame.Name = "KeyFrame"
+    keyFrame.Size = UDim2.new(0, 400, 0, 300)
+    keyFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+    keyFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    keyFrame.BorderSizePixel = 0
+    keyFrame.Parent = keyScreenGui
+    
+    local keyFrameCorner = Instance.new("UICorner")
+    keyFrameCorner.CornerRadius = UDim.new(0, 15)
+    keyFrameCorner.Parent = keyFrame
+    
+    -- Glow efekti
+    local keyGlow = Instance.new("Frame")
+    keyGlow.Name = "KeyGlow"
+    keyGlow.Size = UDim2.new(1, 20, 1, 20)
+    keyGlow.Position = UDim2.new(0, -10, 0, -10)
+    keyGlow.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+    keyGlow.BackgroundTransparency = 0.7
+    keyGlow.BorderSizePixel = 0
+    keyGlow.ZIndex = keyFrame.ZIndex - 1
+    keyGlow.Parent = keyFrame
+    
+    local keyGlowCorner = Instance.new("UICorner")
+    keyGlowCorner.CornerRadius = UDim.new(0, 15)
+    keyGlowCorner.Parent = keyGlow
+    
+    -- Başlık
+    local keyTitleLabel = Instance.new("TextLabel")
+    keyTitleLabel.Name = "KeyTitle"
+    keyTitleLabel.Size = UDim2.new(1, -40, 0, 40)
+    keyTitleLabel.Position = UDim2.new(0, 20, 0, 20)
+    keyTitleLabel.BackgroundTransparency = 1
+    keyTitleLabel.Text = keyTitle
+    keyTitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyTitleLabel.TextScaled = true
+    keyTitleLabel.TextXAlignment = Enum.TextXAlignment.Center
+    keyTitleLabel.Font = Enum.Font.GothamBold
+    keyTitleLabel.Parent = keyFrame
+    
+    -- Açıklama
+    local keyDescLabel = Instance.new("TextLabel")
+    keyDescLabel.Name = "KeyDescription"
+    keyDescLabel.Size = UDim2.new(1, -40, 0, 30)
+    keyDescLabel.Position = UDim2.new(0, 20, 0, 70)
+    keyDescLabel.BackgroundTransparency = 1
+    keyDescLabel.Text = keyDescription
+    keyDescLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    keyDescLabel.TextScaled = true
+    keyDescLabel.TextXAlignment = Enum.TextXAlignment.Center
+    keyDescLabel.Font = Enum.Font.Gotham
+    keyDescLabel.Parent = keyFrame
+    
+    -- Key input
+    local keyInput = Instance.new("TextBox")
+    keyInput.Name = "KeyInput"
+    keyInput.Size = UDim2.new(1, -40, 0, 40)
+    keyInput.Position = UDim2.new(0, 20, 0, 120)
+    keyInput.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    keyInput.BorderSizePixel = 0
+    keyInput.Text = ""
+    keyInput.PlaceholderText = keyPlaceholder
+    keyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    keyInput.TextScaled = true
+    keyInput.Font = Enum.Font.Gotham
+    keyInput.Parent = keyFrame
+    
+    local keyInputCorner = Instance.new("UICorner")
+    keyInputCorner.CornerRadius = UDim.new(0, 8)
+    keyInputCorner.Parent = keyInput
+    
+    -- Giriş animasyonu
+    keyInput.FocusLost:Connect(function()
+        createTween(keyInput, {BackgroundColor3 = Color3.fromRGB(35, 35, 45)}, 0.2):Play()
+    end)
+    
+    keyInput.Focused:Connect(function()
+        createTween(keyInput, {BackgroundColor3 = Color3.fromRGB(0, 162, 255)}, 0.2):Play()
+    end)
+    
+    -- Kontrol butonu
+    local checkButton = Instance.new("TextButton")
+    checkButton.Name = "CheckButton"
+    checkButton.Size = UDim2.new(1, -40, 0, 40)
+    checkButton.Position = UDim2.new(0, 20, 0, 180)
+    checkButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+    checkButton.BorderSizePixel = 0
+    checkButton.Text = "Key'i Kontrol Et"
+    checkButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    checkButton.TextScaled = true
+    checkButton.Font = Enum.Font.GothamBold
+    checkButton.Parent = keyFrame
+    
+    local checkButtonCorner = Instance.new("UICorner")
+    checkButtonCorner.CornerRadius = UDim.new(0, 8)
+    checkButtonCorner.Parent = checkButton
+    
+    -- Get Key butonu
+    local getKeyButton = Instance.new("TextButton")
+    getKeyButton.Name = "GetKeyButton"
+    getKeyButton.Size = UDim2.new(1, -40, 0, 35)
+    getKeyButton.Position = UDim2.new(0, 20, 0, 240)
+    getKeyButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    getKeyButton.BorderSizePixel = 0
+    getKeyButton.Text = "Key Al"
+    getKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    getKeyButton.TextScaled = true
+    getKeyButton.Font = Enum.Font.Gotham
+    getKeyButton.Parent = keyFrame
+    
+    local getKeyButtonCorner = Instance.new("UICorner")
+    getKeyButtonCorner.CornerRadius = UDim.new(0, 8)
+    getKeyButtonCorner.Parent = getKeyButton
+    
+    -- Status label
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.Size = UDim2.new(1, -40, 0, 20)
+    statusLabel.Position = UDim2.new(0, 20, 1, -40)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = ""
+    statusLabel.TextColor3 = Color3.fromRGB(255, 85, 85)
+    statusLabel.TextScaled = true
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.Parent = keyFrame
+    
+    -- Animasyonlar
+    keyFrame.Size = UDim2.new(0, 0, 0, 0)
+    createTween(keyFrame, {Size = UDim2.new(0, 400, 0, 300)}, 0.5, Enum.EasingStyle.Back):Play()
+    
+    -- Buton hover efektleri
+    checkButton.MouseEnter:Connect(function()
+        createTween(checkButton, {BackgroundColor3 = Color3.fromRGB(0, 142, 235)}, 0.2):Play()
+    end)
+    
+    checkButton.MouseLeave:Connect(function()
+        createTween(checkButton, {BackgroundColor3 = Color3.fromRGB(0, 162, 255)}, 0.2):Play()
+    end)
+    
+    getKeyButton.MouseEnter:Connect(function()
+        createTween(getKeyButton, {BackgroundColor3 = Color3.fromRGB(55, 55, 65)}, 0.2):Play()
+    end)
+    
+    getKeyButton.MouseLeave:Connect(function()
+        createTween(getKeyButton, {BackgroundColor3 = Color3.fromRGB(45, 45, 55)}, 0.2):Play()
+    end)
+    
+    -- Key kontrol fonksiyonu
+    local function checkKeyInput()
+        local inputKey = keyInput.Text
+        
+        if inputKey == "" then
+            statusLabel.Text = "Lütfen bir key girin!"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 85, 85)
+            return
+        end
+        
+        statusLabel.Text = "Key kontrol ediliyor..."
+        statusLabel.TextColor3 = Color3.fromRGB(255, 255, 85)
+        
+        checkButton.Text = "Kontrol Ediliyor..."
+        checkButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        
+        wait(1) -- Kontrol süresi simülasyonu
+        
+        if self:CheckKey(inputKey) then
+            statusLabel.Text = "Key doğrulandı! GUI yükleniyor..."
+            statusLabel.TextColor3 = Color3.fromRGB(85, 255, 85)
+            
+            checkButton.Text = "Başarılı!"
+            checkButton.BackgroundColor3 = Color3.fromRGB(85, 255, 85)
+            
+            isKeyValid = true
+            
+            wait(1)
+            
+            -- Kapanış animasyonu
+            createTween(keyFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.3):Play()
+            wait(0.3)
+            keyScreenGui:Destroy()
+            
+            successCallback()
+        else
+            statusLabel.Text = "Geçersiz key! Lütfen tekrar deneyin."
+            statusLabel.TextColor3 = Color3.fromRGB(255, 85, 85)
+            
+            checkButton.Text = "Geçersiz Key"
+            checkButton.BackgroundColor3 = Color3.fromRGB(255, 85, 85)
+            
+            wait(2)
+            
+            checkButton.Text = "Key'i Kontrol Et"
+            checkButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+            statusLabel.Text = ""
+            
+            failCallback()
+        end
+    end
+    
+    -- Event bağlantıları
+    checkButton.MouseButton1Click:Connect(checkKeyInput)
+    
+    keyInput.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            checkKeyInput()
+        end
+    end)
+    
+    getKeyButton.MouseButton1Click:Connect(function()
+        if options.KeyUrl and options.KeyUrl ~= "" then
+            -- Clipboard'a kopyala veya link aç
+            setclipboard(options.KeyUrl)
+            statusLabel.Text = "Link kopyalandı!"
+            statusLabel.TextColor3 = Color3.fromRGB(85, 255, 85)
+            
+            wait(2)
+            statusLabel.Text = ""
+        else
+            statusLabel.Text = "Key linki bulunamadı!"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 85, 85)
+        end
+    end)
+    
+    return {
+        Frame = keyFrame,
+        IsValid = function() return isKeyValid end,
+        Destroy = function() keyScreenGui:Destroy() end
+    }
+end
+
 -- Ana GUI oluşturma fonksiyonu
 function UltraGUI:CreateWindow(options)
     options = options or {}
