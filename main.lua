@@ -49,6 +49,17 @@ local validKeys = {}
 local keyCheckUrl = ""
 local isKeyValid = false
 
+-- Gerekli servisleri tanımla
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Tween oluşturma fonksiyonu
+local function createTween(object, properties, duration, easingStyle)
+    local tweenInfo = TweenInfo.new(duration or 0.3, easingStyle or Enum.EasingStyle.Quad)
+    return TweenService:Create(object, tweenInfo, properties)
+end
+
 -- Key sistemi fonksiyonları
 function UltraGUI:SetKey(key)
     if type(key) == "string" then
@@ -283,7 +294,7 @@ function UltraGUI:CreateKeySystem(options)
         checkButton.Text = "Kontrol Ediliyor..."
         checkButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         
-        wait(1) -- Kontrol süresi simülasyonu
+        task.wait(1) -- Kontrol süresi simülasyonu
         
         if self:CheckKey(inputKey) then
             statusLabel.Text = "Key doğrulandı! GUI yükleniyor..."
@@ -294,11 +305,11 @@ function UltraGUI:CreateKeySystem(options)
             
             isKeyValid = true
             
-            wait(1)
+            task.wait(1)
             
             -- Kapanış animasyonu
             createTween(keyFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.3):Play()
-            wait(0.3)
+            task.wait(0.3)
             keyScreenGui:Destroy()
             
             successCallback()
@@ -309,7 +320,7 @@ function UltraGUI:CreateKeySystem(options)
             checkButton.Text = "Geçersiz Key"
             checkButton.BackgroundColor3 = Color3.fromRGB(255, 85, 85)
             
-            wait(2)
+            task.wait(2)
             
             checkButton.Text = "Key'i Kontrol Et"
             checkButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
@@ -331,11 +342,16 @@ function UltraGUI:CreateKeySystem(options)
     getKeyButton.MouseButton1Click:Connect(function()
         if options.KeyUrl and options.KeyUrl ~= "" then
             -- Clipboard'a kopyala veya link aç
-            setclipboard(options.KeyUrl)
-            statusLabel.Text = "Link kopyalandı!"
-            statusLabel.TextColor3 = Color3.fromRGB(85, 255, 85)
+            if setclipboard then
+                setclipboard(options.KeyUrl)
+                statusLabel.Text = "Link kopyalandı!"
+                statusLabel.TextColor3 = Color3.fromRGB(85, 255, 85)
+            else
+                statusLabel.Text = "Clipboard desteklenmiyor!"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 85, 85)
+            end
             
-            wait(2)
+            task.wait(2)
             statusLabel.Text = ""
         else
             statusLabel.Text = "Key linki bulunamadı!"
